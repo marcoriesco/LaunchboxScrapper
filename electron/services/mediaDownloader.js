@@ -62,8 +62,8 @@ async function downloadMedia(systemName, gameFileName, mediaImages) {
         const gameBaseName = path.basename(gameFileName, path.extname(gameFileName));
         const finalFilePath = path.join(targetFolder, `${gameBaseName}${ext}`);
         
-        // Skip if exists
-        if (fs.existsSync(finalFilePath)) {
+        // Skip if exists and overwrite is disabled
+        if (fs.existsSync(finalFilePath) && !config.overwriteExisting) {
             results.push({ type: image.type, path: finalFilePath, status: 'exists' });
             downloadedCategories.add(mappedFolder);
             continue;

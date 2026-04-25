@@ -184,6 +184,26 @@ export default function SettingsPage() {
                             </span>
                         </div>
                     </label>
+
+                    {/* Sobrescrever Imagens */}
+                    <label className="flex items-center gap-3 cursor-pointer">
+                        <div className="relative">
+                            <input 
+                                type="checkbox" 
+                                className="sr-only" 
+                                checked={config.overwriteExisting === true}
+                                onChange={(e) => setConfig({ ...config, overwriteExisting: e.target.checked })}
+                            />
+                            <div className={`block w-14 h-8 rounded-full transition-colors ${config.overwriteExisting ? 'bg-orange-500' : 'bg-gray-600'}`}></div>
+                            <div className={`dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition-transform ${config.overwriteExisting ? 'transform translate-x-6' : ''}`}></div>
+                        </div>
+                        <div>
+                            <span className="text-gray-300 block">Sobrescrever Imagens Existentes</span>
+                            <span className="text-gray-500 text-xs">
+                                Se ativado, imagens já baixadas serão substituídas por novas. Se desativado, mídias existentes serão mantidas.
+                            </span>
+                        </div>
+                    </label>
                 </div>
 
                 {/* Regiões Preferidas */}

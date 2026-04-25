@@ -43,6 +43,7 @@ function getConfig() {
       mediaTestsPath: true
     },
     verboseLog: true,
+    overwriteExisting: false,
     preferredRegions: ['North America', 'United States', 'Europe', 'World']
   });
 
