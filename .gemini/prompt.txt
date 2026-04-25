@@ -1,0 +1,107 @@
+PROMPT:
+
+Quero que você me ajude a projetar e desenvolver uma aplicação desktop utilizando ElectronJS.
+
+📌 Contexto do Projeto
+
+O projeto será um scraper de jogos e mídias utilizando o LaunchBox como fonte de dados.
+
+Já possuo:
+
+Lógica para buscar plataformas
+Lógica para buscar jogos
+Lógica de pesquisa por nome de jogo
+🧩 Objetivo
+
+Criar uma interface gráfica (GUI) + estrutura de scraping automatizado integrada ao padrão do EmulationStation/RetroBat.
+
+🖥️ Tecnologias
+ElectronJS
+Node.js
+(Sugira libs úteis se necessário)
+🎯 Funcionalidades Principais
+1. Interface inicial (GUI)
+
+A interface terá duas frentes principais:
+
+🔎 Busca manual
+Select obrigatório de Plataforma
+Select opcional de Game
+Regras:
+Se apenas a plataforma for selecionada → buscar todos os jogos dela
+Se um game for selecionado → buscar apenas aquele jogo
+⚙️ Scrape automático
+Usuário seleciona uma plataforma
+O sistema faz scraping automaticamente de todos os jogos dessa plataforma
+⚙️ Página de Configuração
+
+O sistema deve permitir configurar:
+
+📁 Caminho do RetroBat
+
+Validar estrutura:
+
+/
+  /roms
+  /emulationstation
+    es_systems.cfg
+    es_systems_{custom}.cfg
+📄 Leitura dos arquivos:
+es_systems.cfg
+es_systems_custom.cfg
+
+Utilizar a tag:
+
+<platform>
+🎮 Lógica de Scraping
+Listar plataformas com base na pasta /roms
+Para cada plataforma:
+Buscar config correspondente no es_systems
+Se não existir → retornar erro
+A partir do es_systems, extrair:
+Extensões de arquivos (ex: .zip, .nes, etc)
+Listar jogos da pasta
+Fazer scraping jogo por jogo via LaunchBox
+🖼️ Sistema de Mídias
+
+Já existem categorias definidas na lógica, exemplo:
+
+Categoria interna	Nome atual
+COVER - 3D	cover
+Requisito:
+
+Permitir ao usuário mapear nomes:
+
+Exemplo:
+
+COVER - 3D → /media/cover
+SCREENSHOT → /media/screenshot
+🧪 Ambiente de Testes
+
+Durante desenvolvimento:
+
+Baixar mídias em:
+/roms/{plataforma}/MEDIA_TESTS/{categoria}
+
+Exemplo:
+
+/roms/snes/MEDIA_TESTS/COVER - 3D
+🧠 O que eu quero de você
+
+Me ajude com:
+
+Arquitetura do projeto (pastas, módulos)
+Estrutura do Electron (main, preload, renderer)
+Sugestão de libs úteis para:
+Parsing XML
+Scraping
+UI
+Fluxo completo da aplicação
+Modelagem de dados
+Estratégia de scraping eficiente
+Organização da configuração (JSON ou DB local)
+Boas práticas
+
+Se possível, já comece sugerindo a estrutura base do projeto.
+
+* Sugestão de salvamento das configs, em um arquivo local, tipo config.json
