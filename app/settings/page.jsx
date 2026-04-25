@@ -98,7 +98,7 @@ export default function SettingsPage() {
                     <h2 className="text-xl font-bold mb-4">Mídias para Baixar</h2>
                     <p className="text-gray-400 text-sm mb-4">Selecione quais tipos de mídia deseja fazer o scrape. Futuramente, isso poderá ser feito por sistema.</p>
                     <div className="flex flex-col gap-3">
-                        {['box3d', 'cover', 'screenshot', 'titlescreen', 'wheel', 'fanart', 'cartridge'].map(type => (
+                        {['cover3d', 'cover2d', 'screenshot', 'titlescreen', 'wheel', 'fanart', 'cartridge'].map(type => (
                             <div key={type} className="flex flex-col sm:flex-row sm:items-center gap-3 bg-gray-900/50 p-3 rounded-xl border border-gray-800">
                                 <label className="flex items-center gap-3 cursor-pointer min-w-[150px]">
                                     <div className="relative">

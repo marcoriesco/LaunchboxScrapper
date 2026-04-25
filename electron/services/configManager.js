@@ -7,9 +7,9 @@ const store = new Store();
 
 function getConfig() {
   const defaultMapping = {
-      'Box - 3D': 'box3d',
-      'Box - Front': 'cover',
-      'Box - Front - Reconstructed': 'cover',
+      'Box - 3D': 'cover3d',
+      'Box - Front': 'cover2d',
+      'Box - Front - Reconstructed': 'cover2d',
       'Screenshot - Gameplay': 'screenshot',
       'Screenshot - Game Title': 'titlescreen',
       'Clear Logo': 'wheel',
@@ -22,8 +22,8 @@ function getConfig() {
     retrobatPath: '',
     mediaMapping: defaultMapping,
     enabledMediaTypes: {
-      box3d: true,
-      cover: true,
+      cover3d: true,
+      cover2d: true,
       screenshot: true,
       titlescreen: true,
       wheel: true,
@@ -31,8 +31,8 @@ function getConfig() {
       cartridge: true
     },
     customFolderNames: {
-      box3d: '',
-      cover: '',
+      cover3d: '',
+      cover2d: '',
       screenshot: '',
       titlescreen: '',
       wheel: '',
@@ -48,8 +48,25 @@ function getConfig() {
   });
 
   // Se o mapeamento for o antigo, atualizamos para o novo
-  if (config.mediaMapping && config.mediaMapping['COVER - 3D']) {
+  if (config.mediaMapping && (config.mediaMapping['COVER - 3D'] || config.mediaMapping['Box - 3D'] === 'box3d')) {
       config.mediaMapping = defaultMapping;
+      // Migra enabledMediaTypes e customFolderNames antigos
+      if (config.enabledMediaTypes?.box3d !== undefined) {
+          config.enabledMediaTypes.cover3d = config.enabledMediaTypes.box3d;
+          delete config.enabledMediaTypes.box3d;
+      }
+      if (config.enabledMediaTypes?.cover !== undefined) {
+          config.enabledMediaTypes.cover2d = config.enabledMediaTypes.cover;
+          delete config.enabledMediaTypes.cover;
+      }
+      if (config.customFolderNames?.box3d !== undefined) {
+          config.customFolderNames.cover3d = config.customFolderNames.box3d;
+          delete config.customFolderNames.box3d;
+      }
+      if (config.customFolderNames?.cover !== undefined) {
+          config.customFolderNames.cover2d = config.customFolderNames.cover;
+          delete config.customFolderNames.cover;
+      }
       store.set('config', config);
   }
 
