@@ -30,9 +30,20 @@ function getConfig() {
       fanart: true,
       cartridge: true
     },
+    customFolderNames: {
+      box3d: '',
+      cover: '',
+      screenshot: '',
+      titlescreen: '',
+      wheel: '',
+      fanart: '',
+      cartridge: ''
+    },
     devMode: {
       mediaTestsPath: true
-    }
+    },
+    verboseLog: true,
+    preferredRegions: ['North America', 'United States', 'Europe', 'World']
   });
 
   // Se o mapeamento for o antigo, atualizamos para o novo

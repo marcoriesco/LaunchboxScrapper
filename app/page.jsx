@@ -13,9 +13,12 @@ export default function ScraperPage() {
     const [logs, setLogs] = useState([]);
     const [isScraping, setIsScraping] = useState(false);
     const [progress, setProgress] = useState({ current: 0, total: 0 });
+    const [verboseLog, setVerboseLog] = useState(true); // Carregado do config
     
     // Referência para podermos cancelar o loop de forma segura
     const cancelRef = useRef(false);
+    // Contadores de sessão
+    const statsRef = useRef({ success: 0, notFound: 0, error: 0 });
 
     useEffect(() => {
         if (window.electronAPI) {
@@ -25,6 +28,10 @@ export default function ScraperPage() {
                 } else {
                     addLog('Erro ao carregar sistemas: ' + res.error, 'error');
                 }
+            });
+            // Carrega verbose do config
+            window.electronAPI.getConfig().then(c => {
+                setVerboseLog(c?.verboseLog !== false); // padrão: true
             });
         }
     }, []);
@@ -43,37 +50,70 @@ export default function ScraperPage() {
         }
     }, [selectedSystem]);
 
-    const addLog = (msg, type = 'info') => {
+    const addLog = (msg, type = 'info', force = false) => {
+        // Se verbose estiver desligado, só exibe 'success', 'error', 'summary' e logs forçados
+        if (!force && !verboseLog && type === 'info') return;
         setLogs(prev => [...prev, { msg, type, time: new Date().toLocaleTimeString() }]);
     };
 
     const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+    const printSummary = (label) => {
+        const { success, notFound, error } = statsRef.current;
+        const total = success + notFound + error;
+        setLogs(prev => [
+            ...prev,
+            { msg: '─'.repeat(50), type: 'summary', time: new Date().toLocaleTimeString() },
+            { msg: `${label}`, type: 'summary', time: new Date().toLocaleTimeString() },
+            { msg: `📊 Total processados : ${total}`, type: 'summary', time: new Date().toLocaleTimeString() },
+            { msg: `✅ Sucesso           : ${success}`, type: 'success', time: new Date().toLocaleTimeString() },
+            { msg: `🔍 Não encontrados   : ${notFound}`, type: 'warning', time: new Date().toLocaleTimeString() },
+            { msg: `❌ Erros             : ${error}`, type: 'error', time: new Date().toLocaleTimeString() },
+            { msg: '─'.repeat(50), type: 'summary', time: new Date().toLocaleTimeString() },
+        ]);
+    };
+
     const scrapeSingleGame = async (system, gameObj) => {
-        addLog(`Iniciando busca para: ${gameObj.searchName}`, 'info');
+        // Usa o nome limpo (sem tags de região/versão) para busca
+        const queryName = gameObj.cleanSearchName || gameObj.searchName;
+        addLog(`Iniciando busca para: ${gameObj.searchName}${queryName !== gameObj.searchName ? ` (pesquisando: "${queryName}")` : ''}`, 'info');
 
         const sysObj = systems.find(s => s.name === system);
         const platformName = sysObj ? sysObj.launchboxPlatform : system;
 
-        // 1. Busca na Launchbox (Pesquisa)
-        const searchResults = await window.electronAPI.launchboxSearchGame({ query: gameObj.searchName, platformName });
+        // 1. Busca na Launchbox com o nome limpo
+        const searchResults = await window.electronAPI.launchboxSearchGame({ query: queryName, platformName });
         if (searchResults.error || searchResults.length === 0) {
-            addLog(`❌ Nenhum resultado LaunchBox encontrado para ${gameObj.searchName}`, 'error');
+            addLog(`❌ Não encontrado: "${queryName}"`, 'error', true);
+            statsRef.current.notFound++;
             return;
         }
 
-        // Pega o primeiro resultado (o mais relevante)
-        const bestMatch = searchResults[0];
-        addLog(`Encontrado LaunchBox URL: ${bestMatch.url}`, 'info');
+        // Encontra o melhor resultado (prioriza o match exato se houver mais de 1 resultado)
+        let bestMatch = searchResults[0];
+        if (searchResults.length > 1) {
+            const normalize = (str) => {
+                const noTags = str.replace(/\([^)]*\)|\[[^\]]*\]/g, '');
+                return noTags.toLowerCase().replace(/[^a-z0-9]/g, '');
+            };
+            const normalizedQuery = normalize(queryName);
+            const exactMatch = searchResults.find(r => normalize(r.title) === normalizedQuery);
+            if (exactMatch) {
+                bestMatch = exactMatch;
+            }
+        }
+        
+        addLog(`🔗 Match: ${bestMatch.title}`, 'info');
 
         // 2. Faz o scraping da página do jogo
         const media = await window.electronAPI.launchboxScrapeGame(bestMatch.url);
         if (media.error || media.length === 0) {
-            addLog(`⚠️ Nenhuma mídia encontrada na página de ${gameObj.searchName}`, 'warning');
+            addLog(`⚠️ Sem mídia: ${gameObj.searchName}`, 'warning', true);
+            statsRef.current.notFound++;
             return;
         }
 
-        addLog(`⬇️ Baixando ${media.length} mídias para ${gameObj.searchName}...`, 'info');
+        addLog(`⬇️ Baixando ${media.length} imagens para ${gameObj.searchName}...`, 'info');
 
         // 3. Baixa e salva as mídias
         const downloadResult = await window.electronAPI.downloadMedia({
@@ -83,10 +123,12 @@ export default function ScraperPage() {
         });
 
         if (downloadResult.error) {
-            addLog(`❌ Erro no download: ${downloadResult.error}`, 'error');
+            addLog(`❌ Erro no download: ${downloadResult.error}`, 'error', true);
+            statsRef.current.error++;
         } else {
             const successCount = downloadResult.filter(d => d.status === 'downloaded' || d.status === 'exists').length;
-            addLog(`✅ Mídias salvas com sucesso! (${successCount}/${media.length})`, 'success');
+            addLog(`✅ ${gameObj.searchName} — ${successCount} mídia(s) salva(s)`, 'success', true);
+            statsRef.current.success++;
         }
     };
 
@@ -94,10 +136,12 @@ export default function ScraperPage() {
         if (!selectedSystem || !selectedGame) return;
         setIsScraping(true);
         setStatus('Scraping Manual em Andamento...');
+        statsRef.current = { success: 0, notFound: 0, error: 0 };
         
         const gameObj = games.find(g => g.fileName === selectedGame);
         await scrapeSingleGame(selectedSystem, gameObj);
-        
+
+        printSummary('🏁 Busca Manual Concluída');
         setStatus('Concluído.');
         setIsScraping(false);
     };
@@ -106,25 +150,26 @@ export default function ScraperPage() {
         if (!selectedSystem) return;
         setIsScraping(true);
         cancelRef.current = false;
+        statsRef.current = { success: 0, notFound: 0, error: 0 };
         setStatus('Scraping Automático em Andamento...');
         setProgress({ current: 0, total: games.length });
         
-        addLog(`Iniciando scraping automático de ${games.length} jogos para ${selectedSystem}`, 'info');
+        addLog(`🚀 Iniciando scraping de ${games.length} jogos para ${selectedSystem}`, 'info', true);
         
         for (let i = 0; i < games.length; i++) {
             setProgress({ current: i + 1, total: games.length });
             if (cancelRef.current) {
-                addLog('⚠️ Scraping Automático Cancelado pelo Usuário', 'warning');
+                printSummary('⚠️ Scraping Cancelado pelo Usuário');
                 setStatus('Cancelado.');
                 setIsScraping(false);
                 setProgress({ current: 0, total: 0 });
                 return;
             }
             await scrapeSingleGame(selectedSystem, games[i]);
-            // Pequeno delay pra não tomar ban
             await delay(1000);
         }
 
+        printSummary('🏁 Scraping Automático Concluído');
         setStatus('Concluído.');
         setIsScraping(false);
         setProgress({ current: 0, total: 0 });
@@ -221,13 +266,22 @@ export default function ScraperPage() {
                         <div className="flex items-center gap-4">
                             {progress.total > 0 && (
                                 <span className="text-xs font-bold text-gray-400">
-                                    Progresso: {progress.current} / {progress.total}
+                                    {progress.current} / {progress.total}
                                 </span>
                             )}
                             {status && (
                                 <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-1 rounded-full animate-pulse">
                                     {status}
                                 </span>
+                            )}
+                            {logs.length > 0 && !isScraping && (
+                                <button
+                                    onClick={() => setLogs([])}
+                                    title="Limpar logs"
+                                    className="text-gray-500 hover:text-gray-300 transition-colors"
+                                >
+                                    <RefreshCcw size={14} />
+                                </button>
                             )}
                         </div>
                     </div>
@@ -245,9 +299,10 @@ export default function ScraperPage() {
                         ) : (
                             logs.map((log, i) => (
                                 <div key={i} className={`flex gap-3 ${
-                                    log.type === 'error' ? 'text-red-400' :
+                                    log.type === 'error'   ? 'text-red-400' :
                                     log.type === 'success' ? 'text-green-400' :
                                     log.type === 'warning' ? 'text-yellow-400' :
+                                    log.type === 'summary' ? 'text-purple-300 font-bold' :
                                     'text-gray-400'
                                 }`}>
                                     <span className="text-gray-600 shrink-0">[{log.time}]</span>

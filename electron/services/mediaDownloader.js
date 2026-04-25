@@ -22,7 +22,20 @@ async function downloadMedia(systemName, gameFileName, mediaImages) {
     const results = [];
     const downloadedCategories = new Set();
 
-    for (const image of mediaImages) {
+    // Ordena as imagens pela prioridade de região configurada
+    const preferredRegions = config.preferredRegions || [];
+    const sortedImages = [...mediaImages].sort((a, b) => {
+        const regionA = (a.region || '').toLowerCase();
+        const regionB = (b.region || '').toLowerCase();
+        const indexA = preferredRegions.findIndex(r => regionA.includes(r.toLowerCase()));
+        const indexB = preferredRegions.findIndex(r => regionB.includes(r.toLowerCase()));
+        // Regiões não listadas ficam no final (index -1 vira Infinity)
+        const prioA = indexA === -1 ? Infinity : indexA;
+        const prioB = indexB === -1 ? Infinity : indexB;
+        return prioA - prioB;
+    });
+
+    for (const image of sortedImages) {
         // Find mapped category or ignore
         const mappedFolder = mapping[image.type];
         if (!mappedFolder) continue; // Category not mapped, skip downloading
@@ -35,7 +48,11 @@ async function downloadMedia(systemName, gameFileName, mediaImages) {
         // NOVO: Baixar apenas a primeira mídia de cada categoria
         if (downloadedCategories.has(mappedFolder)) continue;
 
-        const targetFolder = path.join(basePath, mappedFolder);
+        const customFolderName = (config.customFolderNames && config.customFolderNames[mappedFolder]) 
+            ? config.customFolderNames[mappedFolder] 
+            : mappedFolder;
+
+        const targetFolder = path.join(basePath, customFolderName);
         if (!fs.existsSync(targetFolder)) {
             fs.mkdirSync(targetFolder, { recursive: true });
         }
