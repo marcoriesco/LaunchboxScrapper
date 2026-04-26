@@ -73,7 +73,7 @@ function searchGame(query, platformName) {
     
     // 1. Busca exata pelo CompareName (tenta com e sem artigo)
     let results = database.prepare(`
-        SELECT DatabaseID, Name, Platform
+        SELECT DatabaseID, Name, Platform, VideoURL
         FROM Games
         WHERE (CompareName = ? OR CompareName = ?) AND Platform = ?
         LIMIT 1
@@ -82,7 +82,7 @@ function searchGame(query, platformName) {
     // 2. Se não encontrou exato, busca por LIKE
     if (results.length === 0) {
         results = database.prepare(`
-            SELECT DatabaseID, Name, Platform
+            SELECT DatabaseID, Name, Platform, VideoURL
             FROM Games
             WHERE CompareName LIKE ? AND Platform = ?
             ORDER BY LENGTH(Name) ASC
@@ -93,7 +93,7 @@ function searchGame(query, platformName) {
     // 3. Se ainda não encontrou, tenta nos nomes alternativos
     if (results.length === 0) {
         results = database.prepare(`
-            SELECT g.DatabaseID, g.Name, g.Platform
+            SELECT g.DatabaseID, g.Name, g.Platform, g.VideoURL
             FROM GameAlternateTitles alt
             JOIN Games g ON g.DatabaseID = alt.DatabaseID
             WHERE alt.AltNameCompareValue LIKE ? AND g.Platform = ?
@@ -105,7 +105,7 @@ function searchGame(query, platformName) {
     // 4. Última tentativa: sem filtro de plataforma
     if (results.length === 0) {
         results = database.prepare(`
-            SELECT DatabaseID, Name, Platform
+            SELECT DatabaseID, Name, Platform, VideoURL
             FROM Games
             WHERE CompareName = ?
             LIMIT 5
@@ -116,7 +116,7 @@ function searchGame(query, platformName) {
         title: r.Name,
         databaseId: r.DatabaseID,
         platform: r.Platform,
-        // URL de fallback para a página web (caso precise)
+        videoUrl: r.VideoURL || null,
         url: `https://gamesdb.launchbox-app.com/games/details/${r.DatabaseID}`
     }));
 }

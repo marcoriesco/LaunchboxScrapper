@@ -56,6 +56,7 @@ const romManager = require('./services/romManager');
 const scraper = require('./services/scraper');
 const mediaDownloader = require('./services/mediaDownloader');
 const localDb = require('./services/localDb');
+const videoDownloader = require('./services/videoDownloader');
 
 ipcMain.handle('ping', () => 'pong');
 
@@ -116,8 +117,12 @@ ipcMain.handle('launchbox-search-game', async (event, { query, platformName }) =
   }
 });
 
-ipcMain.handle('download-media', async (event, { systemName, gameFileName, mediaImages }) => {
-  return await mediaDownloader.downloadMedia(systemName, gameFileName, mediaImages);
+ipcMain.handle('download-media', async (event, { systemName, gameFileName, mediaImages, videoUrl }) => {
+  return await mediaDownloader.downloadMedia(systemName, gameFileName, mediaImages, videoUrl);
+});
+
+ipcMain.handle('check-media-exists', (event, { systemName, gameFileName }) => {
+  return mediaDownloader.checkMediaExists(systemName, gameFileName);
 });
 
 // === Banco de Dados Local ===
@@ -143,4 +148,13 @@ ipcMain.handle('db-get-platforms', () => {
   } catch (e) {
     return { error: e.message };
   }
+});
+
+// Video Downloader
+ipcMain.handle('download-video', async (event, params) => {
+  return await videoDownloader.downloadVideo(params.videoUrl, params.outputPath, params.duration);
+});
+
+ipcMain.handle('ensure-ytdlp', async () => {
+  return await videoDownloader.ensureYtDlp();
 });

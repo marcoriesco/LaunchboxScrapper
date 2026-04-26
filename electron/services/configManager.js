@@ -28,7 +28,8 @@ function getConfig() {
       titlescreen: true,
       wheel: true,
       fanart: true,
-      cartridge: true
+      cartridge: true,
+      video: true
     },
     customFolderNames: {
       cover3d: '',
@@ -37,14 +38,16 @@ function getConfig() {
       titlescreen: '',
       wheel: '',
       fanart: '',
-      cartridge: ''
+      cartridge: '',
+      video: ''
     },
     devMode: {
       mediaTestsPath: true
     },
     verboseLog: true,
     overwriteExisting: false,
-    preferredRegions: ['North America', 'United States', 'Europe', 'World']
+    preferredRegions: ['North America', 'United States', 'Europe', 'World'],
+    videoDuration: 20
   });
 
   // Se o mapeamento for o antigo, atualizamos para o novo
@@ -67,6 +70,18 @@ function getConfig() {
           config.customFolderNames.cover2d = config.customFolderNames.cover;
           delete config.customFolderNames.cover;
       }
+      store.set('config', config);
+  }
+
+  // Garante que os campos de vídeo existam em configs antigas
+  if (config.enabledMediaTypes && config.enabledMediaTypes.video === undefined) {
+      config.enabledMediaTypes.video = true;
+      config.customFolderNames.video = '';
+      config.videoDuration = 20;
+      store.set('config', config);
+  }
+  if (config.videoDuration === undefined) {
+      config.videoDuration = 20;
       store.set('config', config);
   }
 
