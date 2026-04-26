@@ -12,5 +12,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   launchboxGetGames: (system) => ipcRenderer.invoke('launchbox-get-games', system),
   launchboxScrapeGame: (url) => ipcRenderer.invoke('launchbox-scrape-game', url),
   launchboxSearchGame: (params) => ipcRenderer.invoke('launchbox-search-game', params),
-  downloadMedia: (data) => ipcRenderer.invoke('download-media', data)
+  downloadMedia: (data) => ipcRenderer.invoke('download-media', data),
+
+  // Banco Local
+  dbSearchGame: (params) => ipcRenderer.invoke('db-search-game', params),
+  dbGetImages: (databaseId) => ipcRenderer.invoke('db-get-images', databaseId),
+  dbGetPlatforms: () => ipcRenderer.invoke('db-get-platforms')
 });

@@ -55,6 +55,7 @@ const esParser = require('./services/esParser');
 const romManager = require('./services/romManager');
 const scraper = require('./services/scraper');
 const mediaDownloader = require('./services/mediaDownloader');
+const localDb = require('./services/localDb');
 
 ipcMain.handle('ping', () => 'pong');
 
@@ -119,4 +120,27 @@ ipcMain.handle('download-media', async (event, { systemName, gameFileName, media
   return await mediaDownloader.downloadMedia(systemName, gameFileName, mediaImages);
 });
 
+// === Banco de Dados Local ===
+ipcMain.handle('db-search-game', (event, { query, platformName }) => {
+  try {
+    return localDb.searchGame(query, platformName);
+  } catch (e) {
+    return { error: e.message };
+  }
+});
 
+ipcMain.handle('db-get-images', (event, databaseId) => {
+  try {
+    return localDb.getGameImages(databaseId);
+  } catch (e) {
+    return { error: e.message };
+  }
+});
+
+ipcMain.handle('db-get-platforms', () => {
+  try {
+    return localDb.getPlatforms();
+  } catch (e) {
+    return { error: e.message };
+  }
+});

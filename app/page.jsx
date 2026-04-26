@@ -81,41 +81,76 @@ export default function ScraperPage() {
         const sysObj = systems.find(s => s.name === system);
         const platformName = sysObj ? sysObj.launchboxPlatform : system;
 
-        // 1. Busca na Launchbox com o nome limpo
-        const searchResults = await window.electronAPI.launchboxSearchGame({ query: queryName, platformName });
-        if (searchResults.error || searchResults.length === 0) {
-            addLog(`❌ Não encontrado: "${queryName}"`, 'error', true);
-            statsRef.current.notFound++;
-            return;
-        }
+        let media = [];
 
-        // Encontra o melhor resultado (prioriza o match exato se houver mais de 1 resultado)
-        let bestMatch = searchResults[0];
-        if (searchResults.length > 1) {
-            const normalize = (str) => {
-                const noTags = str.replace(/\([^)]*\)|\[[^\]]*\]/g, '');
-                return noTags.toLowerCase().replace(/[^a-z0-9]/g, '');
-            };
-            const normalizedQuery = normalize(queryName);
-            const exactMatch = searchResults.find(r => normalize(r.title) === normalizedQuery);
-            if (exactMatch) {
-                bestMatch = exactMatch;
-            }
+        // === MODO LOCAL (Banco de Dados) ===
+        const dbResults = await window.electronAPI.dbSearchGame({ query: queryName, platformName });
+        
+        if (dbResults.error) {
+            addLog(`⚠️ DB Local erro: ${dbResults.error}`, 'warning');
         }
         
-        addLog(`🔗 Match: ${bestMatch.title}`, 'info');
+        if (!dbResults.error && dbResults.length > 0) {
+            // Encontra o melhor match (prioriza exato)
+            let bestMatch = dbResults[0];
+            if (dbResults.length > 1) {
+                const normalize = (str) => {
+                    const noTags = str.replace(/\([^)]*\)|\[[^\]]*\]/g, '');
+                    return noTags.toLowerCase().replace(/[^a-z0-9]/g, '');
+                };
+                const normalizedQuery = normalize(queryName);
+                const exactMatch = dbResults.find(r => normalize(r.title) === normalizedQuery);
+                if (exactMatch) bestMatch = exactMatch;
+            }
+            
+            addLog(`🔗 DB Local: ${bestMatch.title} (ID: ${bestMatch.databaseId})`, 'info');
 
-        // 2. Faz o scraping da página do jogo
-        const media = await window.electronAPI.launchboxScrapeGame(bestMatch.url);
-        if (media.error || media.length === 0) {
+            // Busca imagens do jogo no banco local
+            const dbImages = await window.electronAPI.dbGetImages(bestMatch.databaseId);
+            if (!dbImages.error && dbImages.length > 0) {
+                media = dbImages;
+            }
+        }
+
+        // === FALLBACK ONLINE (se não achou no banco local) ===
+        if (media.length === 0) {
+            addLog(`🌐 Banco local sem resultado, buscando online...`, 'info');
+            
+            const searchResults = await window.electronAPI.launchboxSearchGame({ query: queryName, platformName });
+            if (searchResults.error || searchResults.length === 0) {
+                addLog(`❌ Não encontrado: "${queryName}"`, 'error', true);
+                statsRef.current.notFound++;
+                return;
+            }
+
+            let bestMatch = searchResults[0];
+            if (searchResults.length > 1) {
+                const normalize = (str) => {
+                    const noTags = str.replace(/\([^)]*\)|\[[^\]]*\]/g, '');
+                    return noTags.toLowerCase().replace(/[^a-z0-9]/g, '');
+                };
+                const normalizedQuery = normalize(queryName);
+                const exactMatch = searchResults.find(r => normalize(r.title) === normalizedQuery);
+                if (exactMatch) bestMatch = exactMatch;
+            }
+            
+            addLog(`🔗 Online: ${bestMatch.title}`, 'info');
+
+            const onlineMedia = await window.electronAPI.launchboxScrapeGame(bestMatch.url);
+            if (!onlineMedia.error && onlineMedia.length > 0) {
+                media = onlineMedia;
+            }
+        }
+
+        if (media.length === 0) {
             addLog(`⚠️ Sem mídia: ${gameObj.searchName}`, 'warning', true);
             statsRef.current.notFound++;
             return;
         }
 
-        addLog(`⬇️ Baixando ${media.length} imagens para ${gameObj.searchName}...`, 'info');
+        addLog(`⬇️ Encontradas ${media.length} imagens para ${gameObj.searchName}...`, 'info');
 
-        // 3. Baixa e salva as mídias
+        // Baixa e salva as mídias
         const downloadResult = await window.electronAPI.downloadMedia({
             systemName: system,
             gameFileName: gameObj.fileName,
