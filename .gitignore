@@ -5,6 +5,9 @@ node_modules/
 .next/
 out/
 
+# LaunchBox metadata (too large for git)
+launchbox/
+
 # Misc
 *.log
 .DS_Store
